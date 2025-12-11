@@ -1,0 +1,3 @@
+@echo off
+echo Starting FastAPI server with Pandas...
+python -m uvicorn backend_simple:app --reload --port 9000

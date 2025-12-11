@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Usage Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --primary: #4C57D6;
+        --secondary: #6C73F7;
+        --bg-light: #eef2f7;
+        --bg-dark: #1e1e2f;
+        --card-light: rgba(255,255,255,0.9);
+        --card-dark: rgba(30,30,50,0.9);
+        --text-light: #333;
+        --text-dark: #f0f0f5;
+    }
+
+    body {
+        margin: 0;
+        font-family: 'Roboto', sans-serif;
+        background: var(--bg-light);
+        color: var(--text-light);
+        transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+        background: var(--bg-dark);
+        color: var(--text-dark);
+    }
+
+    header {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        color: #fff;
+        text-align: center;
+        padding: 25px 20px;
+        font-size: 26px;
+        font-weight: 700;
+        position: relative;
+    }
+
+    #toggleTheme {
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 8px;
+        background: #fff;
+        color: var(--primary);
+        cursor: pointer;
+        font-weight: 500;
+        transition: 0.3s;
+    }
+
+    #toggleTheme:hover { background: #f0f0f0; }
+
+    .container {
+        width: 95%;
+        max-width: 1200px;
+        margin: 30px auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+    }
+
+    .card {
+        background: var(--card-light);
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+    }
+
+    body.dark .card { background: var(--card-dark); }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 25px rgba(0,0,0,0.2);
+    }
+
+    h2 { color: var(--primary); margin-bottom: 20px; }
+
+    .upload-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px dashed var(--secondary);
+        border-radius: 15px;
+        padding: 35px;
+        text-align: center;
+        cursor: pointer;
+        color: var(--primary);
+        font-weight: 500;
+        font-size: 18px;
+        transition: 0.3s;
+    }
+
+    .upload-box:hover { background: var(--secondary); color: #fff; }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--card-light);
+        transition: background 0.3s;
+    }
+
+    body.dark table { background: var(--card-dark); }
+
+    table th, table td { padding: 12px 15px; text-align: left; vertical-align: middle; }
+    table th { background: var(--primary); color: #fff; }
+    table tr:nth-child(even) { background: rgba(0,0,0,0.03); }
+    body.dark table tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+
+    table img { width: 24px; height: 24px; vertical-align: middle; margin-right: 8px; border-radius: 5px; }
+
+    canvas { width: 100% !important; height: 300px !important; }
+
+    .summary p { margin: 12px 0; font-size: 16px; }
+    .summary span { font-weight: 600; color: var(--primary); }
+
+    @media(max-width:600px){
+        header { font-size:22px; }
+        #toggleTheme { top:10px; right:10px; padding:5px 10px; font-size:14px; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    📱 Mobile Usage Dashboard
+    <button id="toggleTheme">Dark Mode</button>
+</header>
+
+<div class="container">
+
+    <!-- Upload Section -->
+    <div class="card">
+        <h2>Upload CSV</h2>
+        <div class="upload-box" id="uploadBox">
+            Click to Upload
+            <input type="file" id="fileInput" accept=".csv" style="display:none;">
+        </div>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="card summary">
+        <h2>Usage Summary</h2>
+        <p>Total Screen Time: <span id="totalTime">--</span></p>
+        <p>Most Used App: <span id="topApp">--</span></p>
+        <p>Peak Usage Hour: <span id="peakHour">--</span></p>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="card">
+        <h2>App-wise Usage (Bar Chart)</h2>
+        <canvas id="appChart"></canvas>
+    </div>
+
+    <!-- Pie Chart Section -->
+    <div class="card">
+        <h2>Category Distribution (Pie Chart)</h2>
+        <canvas id="categoryChart"></canvas>
+    </div>
+
+    <!-- Table Section -->
+    <div class="card">
+        <h2>App Usage Table</h2>
+        <table id="outputTable"></table>
+    </div>
+
+    <!-- Category Table Section -->
+    <div class="card">
+        <h2>Category Summary</h2>
+        <table id="categoryTable"></table>
+    </div>
+
+</div>
+
+<script>
+const appIcons = {
+    "WhatsApp": "https://cdn-icons-png.flaticon.com/512/733/733585.png",
+    "Facebook": "https://cdn-icons-png.flaticon.com/512/733/733547.png",
+    "Instagram": "https://cdn-icons-png.flaticon.com/512/2111/2111463.png",
+    "YouTube": "https://cdn-icons-png.flaticon.com/512/1384/1384060.png",
+    "Twitter": "https://cdn-icons-png.flaticon.com/512/733/733579.png",
+    "Default": "https://cdn-icons-png.flaticon.com/512/565/565547.png"
+};
+
+document.getElementById("toggleTheme").onclick = () => {
+    document.body.classList.toggle("dark");
+    document.getElementById("toggleTheme").textContent = document.body.classList.contains("dark") ? "Light Mode" : "Dark Mode";
+};
+
+document.getElementById("uploadBox").onclick = () => document.getElementById("fileInput").click();
+
+document.getElementById("fileInput").addEventListener("change", function () {
+    const file = this.files[0];
+    if (file) uploadToBackend(file);
+});
+
+// Upload file to backend API (using PySpark)
+async function uploadToBackend(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        document.getElementById("totalTime").textContent = "Processing with Spark...";
+        document.getElementById("topApp").textContent = "Loading...";
+        document.getElementById("peakHour").textContent = "Loading...";
+        
+        const response = await fetch('http://localhost:8002/analyze', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Backend error: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Spark Analysis Result:', data);
+        
+        // Update UI with Spark results
+        document.getElementById("totalTime").textContent = data.total_usage_minutes + " minutes";
+        document.getElementById("topApp").textContent = data.most_used_app;
+        document.getElementById("peakHour").textContent = data.peak_usage_hour;
+        
+        // Create table from app usage data
+        let tableHTML = "<tr><th>App Name</th><th>Usage (minutes)</th><th>Category</th></tr>";
+        
+        // Create a map of app to category
+        const categoryMap = {};
+        data.category_usage.forEach(cat => {
+            categoryMap[cat.category] = cat.category;
+        });
+        
+        // App category mapping (same as backend)
+        const appCategories = {
+            'YouTube': 'Entertainment',
+            'Netflix': 'Entertainment',
+            'Instagram': 'Social Media',
+            'Facebook': 'Social Media',
+            'WhatsApp': 'Social Media',
+            'Twitter': 'Social Media',
+            'Chrome': 'Productivity',
+            'Safari': 'Productivity',
+            'Gmail': 'Productivity',
+            'Spotify': 'Entertainment',
+            'TikTok': 'Social Media'
+        };
+        
+        data.app_usage.forEach(item => {
+            const icon = appIcons[item.app] || appIcons["Default"];
+            const category = appCategories[item.app] || 'Other';
+            tableHTML += `<tr>`;
+            tableHTML += `<td><img src="${icon}" alt="${item.app}">${item.app}</td>`;
+            tableHTML += `<td>${item.minutes}</td>`;
+            tableHTML += `<td><span style="background: #4C57D6; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px;">${category}</span></td>`;
+            tableHTML += `</tr>`;
+        });
+        document.getElementById("outputTable").innerHTML = tableHTML;
+        
+        // Create category table
+        let categoryTableHTML = "<tr><th>Category</th><th>Total Usage (minutes)</th><th>Percentage</th></tr>";
+        const totalMinutes = data.total_usage_minutes;
+        data.category_usage.forEach(item => {
+            const percentage = ((item.minutes / totalMinutes) * 100).toFixed(1);
+            categoryTableHTML += `<tr>`;
+            categoryTableHTML += `<td><strong>${item.category}</strong></td>`;
+            categoryTableHTML += `<td>${item.minutes}</td>`;
+            categoryTableHTML += `<td><div style="background: linear-gradient(90deg, #4C57D6 ${percentage}%, #eee ${percentage}%); padding: 5px 10px; border-radius: 5px; color: #333;">${percentage}%</div></td>`;
+            categoryTableHTML += `</tr>`;
+        });
+        document.getElementById("categoryTable").innerHTML = categoryTableHTML;
+        
+        // Render charts
+        const appUsage = {};
+        data.app_usage.forEach(item => {
+            appUsage[item.app] = item.minutes;
+        });
+        renderChart(appUsage);
+        
+        // Render pie chart for categories
+        const categoryUsage = {};
+        data.category_usage.forEach(item => {
+            categoryUsage[item.category] = item.minutes;
+        });
+        renderPieChart(categoryUsage);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error connecting to backend! Make sure the FastAPI server is running on http://localhost:8000\n\nError: ' + error.message);
+        document.getElementById("totalTime").textContent = "Error";
+        document.getElementById("topApp").textContent = "Error";
+        document.getElementById("peakHour").textContent = "Error";
+    }
+}
+
+let chart;
+let pieChart;
+
+function renderChart(appUsage) {
+    const ctx = document.getElementById("appChart").getContext("2d");
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(appUsage),
+            datasets: [{
+                label: 'Usage Minutes',
+                data: Object.values(appUsage),
+                backgroundColor: Object.keys(appUsage).map((_,i)=>`hsl(${i*50%360},70%,50%)`),
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: { duration: 1200 },
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+function renderPieChart(categoryUsage) {
+    const ctx = document.getElementById("categoryChart").getContext("2d");
+    if (pieChart) pieChart.destroy();
+    
+    // Beautiful color palette for categories
+    const colors = {
+        'Entertainment': '#FF6384',
+        'Social Media': '#36A2EB',
+        'Productivity': '#FFCE56',
+        'Shopping': '#4BC0C0',
+        'Navigation': '#9966FF',
+        'Travel': '#FF9F40',
+        'Gaming': '#FF6384',
+        'Other': '#C9CBCF'
+    };
+    
+    const labels = Object.keys(categoryUsage);
+    const data = Object.values(categoryUsage);
+    const backgroundColors = labels.map(label => colors[label] || colors['Other']);
+    
+    pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Usage Minutes',
+                data: data,
+                backgroundColor: backgroundColors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: { 
+                animateRotate: true,
+                animateScale: true,
+                duration: 1500
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: { size: 12 },
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            return data.labels.map((label, i) => {
+                                const value = data.datasets[0].data[i];
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return {
+                                    text: `${label}: ${value} min (${percentage}%)`,
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    hidden: false,
+                                    index: i
+                                };
+                            });
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} minutes (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>

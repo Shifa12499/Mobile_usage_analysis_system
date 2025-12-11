@@ -1,0 +1,64 @@
+===============================================
+   MOBILE USAGE ANALYSIS PROJECT - QUICK START
+===============================================
+
+✅ BACKEND IS NOW RUNNING!
+Server URL: http://localhost:8001
+
+📋 HOW TO USE:
+--------------
+1. The backend server is already running in your terminal
+2. Open "index.html" in your web browser (should already be open)
+3. Click "Upload CSV" and select your usage.csv file
+4. View the beautiful analytics dashboard!
+
+🎯 WHAT'S WORKING:
+------------------
+✓ FastAPI Backend with Pandas for data processing
+✓ RESTful API endpoint at /analyze
+✓ Interactive web dashboard with:
+  - Total screen time calculation
+  - Most used app detection
+  - Peak usage hour identification
+  - Beautiful bar chart visualization
+  - App usage breakdown table
+  - Dark/Light mode toggle
+
+📊 RESULTS WITH YOUR DATA:
+--------------------------
+Total Usage: 155 minutes
+Most Used App: YouTube (45 min)
+Peak Hour: 21 (9 PM)
+
+App Breakdown:
+  • YouTube: 45 minutes
+  • Chrome: 40 minutes
+  • Instagram: 30 minutes
+  • WhatsApp: 25 minutes
+  • Facebook: 15 minutes
+
+🔄 TO RESTART THE SERVER:
+-------------------------
+Run this command in terminal:
+python -c "import uvicorn; from backend_simple import app; uvicorn.run(app, host='127.0.0.1', port=8001)"
+
+📁 PROJECT FILES:
+-----------------
+backend_simple.py - FastAPI backend (using Pandas)
+index.html - Frontend dashboard
+usage.csv - Sample data
+test_backend.py - API testing script
+
+🚀 SPARK VERSION (Optional):
+----------------------------
+The Spark version (backend.py) requires Java to be configured.
+Current version uses Pandas which works perfectly!
+
+💡 TIP:
+-------
+Upload different CSV files to analyze different usage patterns!
+The CSV should have columns: app_name, usage_minutes, hour
+
+===============================================
+        Enjoy your analytics dashboard! 📱
+===============================================
